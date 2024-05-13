@@ -142,6 +142,47 @@ class llmLib {
             return null;
         }
 
+        
+        const talentsMessage = `Dla wygenerowanego przed chwilą NPC, na podstawie wygenerowanego opisu i biografii oraz profesji, wybierz od czterech do ośmiu  adekwatnych talentów spośród: ${this.talents.map(talent => talent.name).join(", ")}. Wybrane nazwy zwróć w formacie JSON. Nie zmieniaj wielkości liter. Nie zmieniaj wartości ani nazw. Nie odmieniaj nazw talentów.
+        {
+          "talents": []
+        }
+        `;
+        messages.push({ "role": "user", "content": talentsMessage });
+
+        data = {
+          model: "gpt-4-turbo-preview",
+          response_format: { type: "json_object" },
+          messages: messages
+        };
+
+        try {
+          const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                  'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(data)
+          });
+          
+          const responseData = await response.json();
+          let talents = responseData.choices[0].message.content;
+          talents = JSON.parse(talents);
+          actorData.npc.talents = []; 
+          for (let talent of talents.talents) {
+            let co = this.talents.find(c => c.name === talent);
+            if (!co) {
+              co = this.talents.map(c => { return { name: c.name, uuid: c.uuid, index: this.levenshtein(c.name, talent)}; }).sort((a, b) => a.index - b.index)[0];
+            }
+            actorData.npc.talents.push({name: co.name, uuid: co.uuid});
+          }
+          messages.push({ "role": "assistant", "content": responseData.choices[0].message.content });
+        } catch (error) {
+            console.error('Error:', error);
+            return null;
+        }
+
         const dalleMessage = `Dla wygenerowanego przed chwilą NPC, na podstawie wygenerowanego opisu i biografii, przygotuj opis po angielsku na potrzeby generowania protretu. Opis powinien zaczynać się od "Photographic, realistic, fantasy genere. A portrait of". Wygenerowany opis zwróć w formacie JSON.
         {
           "dalle": []
@@ -341,23 +382,23 @@ class llmLib {
   }
 
   static helpfulAssistant = `
- Jesteś pomocnym i kreatywnym asystentem Mistrza Gry w 4. edycji Warhammer Fantasy RPG. Pomagasz, podając opisy i podstawowe cechy dla NPC w określonym formacie JSON. Wyjście będzie zawierać serię cech bohatera niezależnego, opis wyglądu, opis charakteru, od jednej do trzech interesujących cech charakterystycznych, biografię z trzema znaczącymi wydarzeniami w życi postaci (nie bój się dodać więcej) oraz wszelkie powiązania lub relacje z rodziną, przyjaciółmi lub wrogami. Wydasz tylko wymagane atrybuty w języku polskim, bez zbędnych dodatków. Używaj systemu metrycznego. JSON wypełnij wartościami w języku polskim.
+ Jesteś pomocnym i kreatywnym asystentem Mistrza Gry w 4. edycji Warhammer Fantasy RPG. Pomagasz, podając opisy i podstawowe cechy dla NPC w określonym formacie JSON. Wyjście będzie zawierać serię cech bohatera niezależnego, opis wyglądu, opis charakteru, od jednej do trzech interesujących cech, biografię z trzema znaczącymi wydarzeniami w życi postaci (nie bój się dodać więcej) oraz wszelkie powiązania lub relacje z rodziną, przyjaciółmi lub wrogami. Wypiszesz tylko wymagane atrybuty w języku polskim, bez zbędnych dodatków. Używaj systemu metrycznego. JSON wypełnij wartościami w języku polskim. pola characteristics wypełnij wartościami liczbowymi od 1 do 100.
 {
   "npc": {
     "name": "",
     "type": "npc",
     "system": {
       "characteristics": {
-        "ws": { "value": "" },
-        "bs": { "value": "" },
-        "s": { "value": "" },
-        "t": { "value": "" },
-        "i": { "value": "" },
-        "ag": { "value": "" },
-        "dex": { "value": "" },
-        "int": { "value": "" },
-        "wp": { "value": "" },
-        "fel": { "value": "" }
+        "weaponSkill": { "value": "" },
+        "ballisticSkill": { "value": "" },
+        "strength": { "value": "" },
+        "toughness": { "value": "" },
+        "initiative": { "value": "" },
+        "agility": { "value": "" },
+        "dexterity": { "value": "" },
+        "intelligence": { "value": "" },
+        "willPower": { "value": "" },
+        "fellowship": { "value": "" }
       },
       "details": {
         "biography": { "value": "" },
